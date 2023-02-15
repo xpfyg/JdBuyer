@@ -6,7 +6,7 @@ import pickle
 import random
 import time
 import requests
-
+from log import logger
 from lxml import etree
 
 DEFAULT_TIMEOUT = 10
@@ -455,6 +455,7 @@ class Session(object):
 
         try:
             resp = self.sess.post(url=url, data=data, headers=headers)
+            logger.info('下单结果，{0}'.format(resp.text))
             respJson = json.loads(resp.text)
 
             if respJson.get('success'):

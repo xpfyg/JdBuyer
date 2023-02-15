@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import random
 import time
 
 from config import global_config
@@ -11,6 +12,7 @@ from utils import (
     open_image,
     send_wechat
 )
+from cachetools import TTLCache
 
 
 class Buyer(object):
@@ -62,7 +64,8 @@ class Buyer(object):
         self.session.saveCookies()
 
     ############## 外部方法 #############
-    def buyItemInStock(self, skuId, areaId, skuNum=1, stockInterval=3, submitRetry=3, submitInterval=5, buyTime='2022-08-06 00:00:00'):
+    def buyItemInStock(self, skuId, areaId, skuNum=1, stockInterval=3, submitRetry=3, submitInterval=5,
+                       buyTime='2022-08-06 00:00:00', randStock=None):
         """根据库存自动下单商品
         :skuId 商品sku
         :areaId 下单区域id
@@ -76,8 +79,20 @@ class Buyer(object):
         timer = Timer(buyTime)
         timer.start()
 
+        catche1 = TTLCache(maxsize=1, ttl=1800)
+        catche2 = TTLCache(maxsize=1, ttl=3600)
+        catche3 = TTLCache(maxsize=1, ttl=7200)
         while True:
             try:
+                if randStock is not None:
+                    stockInterval = random.randint(randStock[0],randStock[1])
+                if catche1.get('hasCount'):
+                    stockInterval = random.randint(1, 5)
+                elif catche2.get('hasCount'):
+                    stockInterval = random.randint(5, 20)
+                elif catche3.get('hasCount'):
+                    stockInterval = random.randint(20, 60)
+
                 if not self.session.getItemStock(skuId, skuNum, areaId):
                     logger.info('不满足下单条件，{0}s后进行下一次查询'.format(stockInterval))
                 else:
@@ -88,29 +103,34 @@ class Buyer(object):
                             send_wechat(
                                 message='JdBuyerApp', desp='您的商品已下单成功，请及时支付订单', sckey=self.scKey)
                         return
+                    #刷到货了没下单成功
+                    catche1["hasCount"] = True
+                    catche2["hasCount"] = True
+                    catche3["hasCount"] = True
             except Exception as e:
                 logger.error(e)
             time.sleep(stockInterval)
 
 
 if __name__ == '__main__':
-
     # 商品sku
-    skuId = '100015253059'
+    skuId = '614833'
     # 区域id(可根据工程 area_id 目录查找)
-    areaId = '1_2901_55554_0'
+    areaId = '15_1213_1214_52672'
     # 购买数量
-    skuNum = 1
+    skuNum = 2
     # 库存查询间隔(秒)
-    stockInterval = 3
+    stockInterval = 10
+    # 随机库存查询时间
+    randStock =[20, 600]
     # 监听库存后尝试下单次数
-    submitRetry = 3
+    submitRetry = 5
     # 下单尝试间隔(秒)
-    submitInterval = 5
+    submitInterval = 2
     # 程序开始执行时间(晚于当前时间立即执行，适用于定时抢购类)
     buyTime = '2022-10-10 00:00:00'
 
     buyer = Buyer()  # 初始化
     buyer.loginByQrCode()
     buyer.buyItemInStock(skuId, areaId, skuNum, stockInterval,
-                         submitRetry, submitInterval, buyTime)
+                         submitRetry, submitInterval, buyTime, randStock)
