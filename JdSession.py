@@ -166,6 +166,7 @@ class Session(object):
         """ 解析商品信息
         :param skuId
         """
+
         resp = self.getItemDetail(skuId).json()
         shopId = resp['shopInfo']['shop']['shopId']
         detail = dict(venderId=shopId)
@@ -178,13 +179,19 @@ class Session(object):
 
     ############## 库存方法 #############
     def getItemStock(self, skuId, skuNum, areaId):
+        return False
         """获取单个商品库存状态
         :param skuId: 商品id
         :param num: 商品数量
         :param areadId: 地区id
         :return: 商品是否有货 True/False
         """
-        resp = self.getItemDetail(skuId, skuNum, areaId).json()
+        try:
+            respStr = self.getItemDetail(skuId, skuNum, areaId)
+            resp = respStr.json()
+        except Exception as e:
+            logger.info('getItemStock 错误，{0}'.format(respStr))
+            return False
         return 'stockInfo' in resp and resp['stockInfo']['isStock']
 
     ############## 购物车相关 #############

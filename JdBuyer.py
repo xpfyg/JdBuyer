@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import random
 import time
+import traceback
 
 from config import global_config
 from log import logger
@@ -108,6 +109,7 @@ class Buyer(object):
                     catche2["hasCount"] = True
                     catche3["hasCount"] = True
             except Exception as e:
+                traceback.print_exc()
                 logger.error(e)
             time.sleep(stockInterval)
 
